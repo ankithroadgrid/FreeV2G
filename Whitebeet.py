@@ -950,6 +950,10 @@ class Whitebeet():
         message['evse_present_voltage'] = self.payloadReaderReadExponential()
         message['evse_present_current'] = self.payloadReaderReadExponential()
         message['evse_status'] = self.payloadReaderReadInt(1)
+        if self.payloadBytesRead == self.payloadBytesLen:
+            self.payloadReaderFinalize()
+            return message
+
         if self.payloadReaderReadInt(1) != 0:
             message['evse_isolation_status'] = self.payloadReaderReadInt(1)
         message['evse_voltage_limit_achieved'] = self.payloadReaderReadInt(1)

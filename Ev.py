@@ -22,8 +22,8 @@ class Ev():
         self.config["protocols"] = [0, 1]
         self.config["payment_method_count"] = 1
         self.config["payment_method"] = [0]
-        self.config["energy_transfer_mode_count"] = 2
-        self.config["energy_transfer_mode"] = [0, 4]
+        self.config["energy_transfer_mode_count"] = 3
+        self.config["energy_transfer_mode"] = [0, 1, 4]
         self.config["battery_capacity"] = self.battery.getCapacity()
 
         self.DCchargingParams = {}
@@ -157,7 +157,7 @@ class Ev():
                 cp_dc = self.whitebeet.controlPilotGetDutyCycle()
                 if timeout != None and timestamp_start + timeout < time.time():
                     return False
-                if cp_dc < 10.0 and cp_dc > 0.1:
+                if 1: #if cp_dc < 10.0 and cp_dc >= 0:
                     print("EVSE connected")
                     return True
                 else:
@@ -171,7 +171,7 @@ class Ev():
         """
 
         print("Start SLAC matching")
-        time.sleep(5.0)
+        time.sleep(1.0)
         self.whitebeet.slacStartMatching()
         try:
             if self.whitebeet.slacMatched() == True:
@@ -216,7 +216,7 @@ class Ev():
         oldVal = self.whitebeet.controlPilotGetDutyCycle()
         print("ControlPilot duty cycle: " + str(oldVal))
         while not (self.state == "end"):
-
+     
             # EV state machine
             if self.state == "sessionStarting":
                 pass
@@ -262,20 +262,21 @@ class Ev():
 
                 # DC    
                 if self.currentEnergyTransferMode in [0,1,2,3]:
-                
+                    
                     # check max voltage
                     if self.battery.in_voltage > self.battery.max_voltage:
                         startCharging = False
-
+                       
                     # check target voltage
-                    if (self.battery.in_voltage > self.battery.target_voltage + self.battery.target_voltage_delta) \
-                    or (self.battery.in_voltage < self.battery.target_voltage - self.battery.target_voltage_delta):
-                        startCharging = False
-                    
+                    # commented because battery behaviour is not simulated
+                    #if (self.battery.in_voltage > self.battery.target_voltage + self.battery.target_voltage_delta) \
+                    #or (self.battery.in_voltage < self.battery.target_voltage - self.battery.target_voltage_delta):
+                        #startCharging = False
+                        
                     # check target current
                     if self.battery.in_current > self.battery.max_current:
                         startCharging = False
-                
+                         
                 # AC
                 elif self.currentEnergyTransferMode in [4,5]:
                     
@@ -301,7 +302,7 @@ class Ev():
                     try:
                         self.battery.is_charging = True
                         self.whitebeet.v2gStartCharging()
-
+                        
                         # If we are charging in DC state C was already set prior to the cable check,
                         # but if we are charging in AC we need to set the state C here.
                         print("Change State to State C")
@@ -341,6 +342,8 @@ class Ev():
                         self.DCchargingParams["soc"] = self.battery.getSOC()
                         try:                  
                             if self.currentEnergyTransferMode in [0,1,2,3]:
+                                self.DCchargingParams["target_voltage"] = self.battery.target_voltage
+                                self.DCchargingParams["target_current"] = self.battery.target_current
                                 self.whitebeet.v2gUpdateDCChargingParameters(self.DCchargingParams)
                             elif self.currentEnergyTransferMode in [4,5]:
                                 self.whitebeet.v2gUpdateACChargingParameters(self.ACchargingParams)
@@ -462,10 +465,14 @@ class Ev():
         print("\tEVSE status: {}".format(message['evse_status']))
         if 'evse_isolation_status' in message:
             print("\tEVSE isolation status: {}".format(message['evse_isolation_status']))
-        print("\tEVSE voltage limit achieved: {}".format(message['evse_voltage_limit_achieved']))
-        print("\tEVSE current limit achieved: {}".format(message['evse_current_limit_achieved']))
-        print("\tEVSE power limit achieved: {}".format(message['evse_power_limit_achieved']))
-        print("\tEVSE peak current ripple: {}".format(message['evse_peak_current_ripple']))
+        if 'evse_voltage_limit_achieved' in message:
+            print("\tEVSE voltage limit achieved: {}".format(message['evse_voltage_limit_achieved']))
+        if 'evse_current_limit_achieved' in message:
+            print("\tEVSE current limit achieved: {}".format(message['evse_current_limit_achieved']))
+        if 'evse_power_limit_achieved' in message:
+            print("\tEVSE power limit achieved: {}".format(message['evse_power_limit_achieved']))
+        if 'evse_peak_current_ripple' in message:
+            print("\tEVSE peak current ripple: {}".format(message['evse_peak_current_ripple']))
         if 'evse_current_regulation_tolerance' in message:
             print("\tEVSE current regualtion tolerance: {}".format(message['evse_current_regulation_tolerance']))
         if 'evse_energy_to_be_delivered' in message:
